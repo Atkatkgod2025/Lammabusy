@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lamma Breezy - Cafe Ordering & POS System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM CDNs -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Compiler for In-browser JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+  <div id="root"></div>
+
+  <!-- React Application Logic -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // SVG Icons
+    const CoffeeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>;
+    const ShoppingBagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>;
+    const ChefHatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A6 6 0 0 1 7.41 2a6 6 0 0 1 10.6 0A6 6 0 0 1 18 13.87V21H6Z"/><line x1="6" x2="18" y1="17" y2="17"/></svg>;
+    const WavesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>;
+    const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>;
+    const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>;
+
+    // Sample Menu Data
+    const MENU_ITEMS = [
+      { id: '1', name: 'Lamma Breeze Cold Brew', category: 'coffee', price: 48, desc: '特調椰香冷萃咖啡，帶有淡淡海鹽奶蓋香氣', image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80', popular: true, customizable: true },
+      { id: '2', name: 'Ocean Flat White', category: 'coffee', price: 42, desc: '雙倍濃縮搭配濃郁燕麥奶與細緻奶泡', image: 'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=600&q=80', customizable: true },
+      { id: '3', name: 'Coastal Espresso Tonic', category: 'coffee', price: 46, desc: '清涼西西里青檸湯力水搭配單品濃縮咖啡', image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80', customizable: true },
+      { id: '4', name: 'Sea Salt Caramel Latte', category: 'coffee', price: 45, desc: '海鹽焦糖拿鐵，甜鹹平衡口感豐富', image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=600&q=80', customizable: true },
+      { id: '5', name: 'Uji Matcha Oat Latte', category: 'drinks', price: 48, desc: '日本宇治抹茶配以燕麥奶，香濃順滑', image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=600&q=80', popular: true, customizable: true },
+      { id: '6', name: 'Island Passion Sparkler', category: 'drinks', price: 42, desc: '百香果菠蘿氣泡特飲，夏日清涼首選', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80', customizable: true },
+      { id: '7', name: 'Avocado Sourdough Toast', category: 'food', price: 78, desc: '牛油果酸酵母吐司配水波蛋及海鹽碎', image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80', popular: true, customizable: false },
+      { id: '8', name: 'Lamma All-Day Breakfast', category: 'food', price: 108, desc: '全日早餐：煙肉、紐倫堡腸、炒蛋、大啡菇、酸酵母吐司', image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=600&q=80', customizable: false },
+      { id: '9', name: 'Basque Sea Salt Cheesecake', category: 'dessert', price: 52, desc: '手工焦香巴斯克芝士蛋糕配沖繩海鹽', image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80', popular: true, customizable: false }
+    ];
+
+    function App() {
+      const [view, setView] = useState('customer');
+      const [activeCategory, setActiveCategory] = useState('all');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [cart, setCart] = useState([]);
+      const [orderType, setOrderType] = useState('dine-in');
+      const [tableNo, setTableNo] = useState('A03');
+      const [customizingItem, setCustomizingItem] = useState(null);
+      const [tempOptions, setTempOptions] = useState({ temp: 'Iced', sweetness: 'Normal', milk: 'Whole Milk', extraShot: false });
+      const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+      const [selectedPayment, setSelectedPayment] = useState('fps');
+      const [orders, setOrders] = useState([
+        {
+          id: 'LB-1001',
+          time: '14:22',
+          type: 'dine-in',
+          tableNo: 'B02',
+          items: [{ name: 'Lamma Breeze Cold Brew', qty: 2, options: '凍 / 正常甜' }, { name: 'Basque Sea Salt Cheesecake', qty: 1, options: '' }],
+          total: 148,
+          status: 'preparing'
+        },
+        {
+          id: 'LB-1002',
+          time: '14:28',
+          type: 'takeaway',
+          tableNo: '',
+          items: [{ name: 'Uji Matcha Oat Latte', qty: 1, options: '凍 / 微甜 / 燕麥奶' }],
+          total: 48,
+          status: 'ready'
+        }
+      ]);
+
+      const filteredItems = MENU_ITEMS.filter(item => {
+        const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      });
+
+      const handleAddItem = (item) => {
+        if (item.customizable) {
+          setCustomizingItem(item);
+          setTempOptions({ temp: 'Iced', sweetness: 'Normal', milk: 'Whole Milk', extraShot: false });
+        } else {
+          addToCartDirect(item, '');
+        }
+      };
+
+      const addToCartDirect = (item, optionsText) => {
+        const cartId = item.id + '-' + optionsText;
+        const existing = cart.find(i => i.cartId === cartId);
+        if (existing) {
+          setCart(cart.map(i => i.cartId === cartId ? { ...i, qty: i.qty + 1 } : i));
+        } else {
+          setCart([...cart, { ...item, cartId, optionsText, qty: 1 }]);
+        }
+      };
+
+      const handleConfirmCustomization = () => {
+        if (!customizingItem) return;
+        const opts = [];
+        opts.push(tempOptions.temp === 'Hot' ? '熱 (Hot)' : '凍 (Iced)');
+        if (tempOptions.sweetness !== 'Normal') opts.push(tempOptions.sweetness);
+        if (tempOptions.milk !== 'Whole Milk') opts.push(tempOptions.milk);
+        if (tempOptions.extraShot) opts.push('+ Shot ($6)');
+        
+        let extraPrice = tempOptions.extraShot ? 6 : 0;
+        const customizedItem = { ...customizingItem, price: customizingItem.price + extraPrice };
+
+        addToCartDirect(customizedItem, opts.join(' / '));
+        setCustomizingItem(null);
+      };
+
+      const updateQty = (cartId, delta) => {
+        setCart(cart.map(item => {
+          if (item.cartId === cartId) {
+            const newQty = item.qty + delta;
+            return newQty > 0 ? { ...item, qty: newQty } : null;
+          }
+          return item;
+        }).filter(Boolean));
+      };
+
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const serviceCharge = orderType === 'dine-in' ? Math.round(subtotal * 0.1) : 0;
+      const totalAmount = subtotal + serviceCharge;
+
+      const handlePlaceOrder = () => {
+        const newOrder = {
+          id: `LB-${Math.floor(1000 + Math.random() * 9000)}`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: orderType,
+          tableNo: orderType === 'dine-in' ? tableNo : '',
+          items: cart.map(c => ({ name: c.name, qty: c.qty, options: c.optionsText })),
+          total: totalAmount,
+          status: 'preparing'
+        };
+        setOrders([newOrder, ...orders]);
+        setCart([]);
+        setIsCheckoutOpen(false);
+        alert(`訂單提交成功！單號：${newOrder.id}`);
+      };
+
+      const updateOrderStatus = (orderId, nextStatus) => {
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col bg-slate-50">
+          <!-- Header -->
+          <header className="bg-sky-700 text-white sticky top-0 z-30 shadow-md">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/20">
+                  <WavesIcon />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight">lamma breezy</h1>
+                  <p className="text-xs text-sky-200 tracking-wider">OCEAN CAFE & ROASTERY</p>
+                </div>
+              </div>
+
+              <!-- Mode Switcher -->
+              <div className="flex bg-sky-800/80 p-1 rounded-xl border border-sky-600/50 text-sm">
+                <button 
+                  onClick={() => setView('customer')}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition ${view === 'customer' ? 'bg-white text-sky-800 shadow-sm' : 'text-sky-100 hover:text-white'}`}
+                >
+                  <CoffeeIcon />
+                  <span>顧客點餐</span>
+                </button>
+                <button 
+                  onClick={() => setView('kitchen')}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition ${view === 'kitchen' ? 'bg-white text-sky-800 shadow-sm' : 'text-sky-100 hover:text-white'}`}
+                >
+                  <ChefHatIcon />
+                  <span>廚房接單 ({orders.filter(o => o.status !== 'completed').length})</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <!-- Main Content -->
+          {view === 'customer' ? (
+            <div className="max-w-7xl mx-auto px-4 py-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+              <!-- Left: Menu Section -->
+              <div className="lg:col-span-8 flex flex-col space-y-6">
+                <!-- Search & Filter Controls -->
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                  <div className="flex space-x-2 overflow-x-auto pb-1 sm:pb-0">
+                    {[
+                      { id: 'all', label: '全部 (All)' },
+                      { id: 'coffee', label: '精品咖啡' },
+                      { id: 'drinks', label: '特飲' },
+                      { id: 'food', label: '輕食' },
+                      { id: 'dessert', label: '甜品' }
+                    ].map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setActiveCategory(cat.id)}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${activeCategory === cat.id ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="搜尋飲品或美食..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <!-- Products Grid -->
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredItems.map(item => (
+                    <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex space-x-4 hover:border-sky-200 transition group">
+                      <img src={item.image} alt={item.name} className="w-24 h-24 rounded-xl object-cover group-hover:scale-105 transition duration-300" />
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-semibold text-slate-800">{item.name}</h3>
+                            {item.popular && <span className="bg-sky-50 text-sky-700 text-xs px-2 py-0.5 rounded-md font-medium">熱門</span>}
+                          </div>
+                          <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.desc}</p>
+                        </div>
+                        <div className="flex justify-between items-center mt-3">
+                          <span className="text-sky-700 font-bold">${item.price}</span>
+                          <button
+                            onClick={() => handleAddItem(item)}
+                            className="bg-sky-600 text-white hover:bg-sky-700 p-2 rounded-xl flex items-center space-x-1 text-xs font-medium transition shadow-sm"
+                          >
+                            <PlusIcon />
+                            <span>{item.customizable ? '選擇客製' : '加入'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Right: Shopping Cart Side Panel -->
+              <div className="lg:col-span-4">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 sticky top-24 flex flex-col h-[calc(100vh-8rem)]">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                    <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
+                      <ShoppingBagIcon />
+                      <span>已選餐點</span>
+                    </h2>
+                    <!-- Dine-in / Takeaway Toggle -->
+                    <div className="flex bg-slate-100 p-1 rounded-lg text-xs font-medium">
+                      <button
+                        onClick={() => setOrderType('dine-in')}
+                        className={`px-3 py-1 rounded-md transition ${orderType === 'dine-in' ? 'bg-sky-600 text-white' : 'text-slate-600'}`}
+                      >
+                        堂食
+                      </button>
+                      <button
+                        onClick={() => setOrderType('takeaway')}
+                        className={`px-3 py-1 rounded-md transition ${orderType === 'takeaway' ? 'bg-sky-600 text-white' : 'text-slate-600'}`}
+                      >
+                        外賣
+                      </button>
+                    </div>
+                  </div>
+
+                  {orderType === 'dine-in' && (
+                    <div className="py-3 px-4 bg-sky-50/60 rounded-xl my-3 flex justify-between items-center text-xs text-sky-800">
+                      <span>桌號 Table No.</span>
+                      <input
+                        type="text"
+                        value={tableNo}
+                        onChange={(e) => setTableNo(e.target.value)}
+                        className="w-16 text-center font-bold bg-white border border-sky-200 rounded-md py-1 text-sky-900 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      />
+                    </div>
+                  )}
+
+                  <!-- Cart Items Container -->
+                  <div className="flex-1 overflow-y-auto py-3 space-y-3">
+                    {cart.length === 0 ? (
+                      <div className="h-full flex flex-col justify-center items-center text-slate-400 text-center">
+                        <CoffeeIcon />
+                        <p className="mt-2 text-sm">購物車仲係空的<br/>快啲揀下想飲咩啦！</p>
+                      </div>
+                    ) : (
+                      cart.map(item => (
+                        <div key={item.cartId} className="flex justify-between items-start bg-slate-50 p-3 rounded-xl">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-slate-800">{item.name}</div>
+                            {item.optionsText && <div className="text-xs text-sky-600 mt-0.5">{item.optionsText}</div>}
+                            <div className="text-sky-700 font-bold text-xs mt-1">${item.price}</div>
+                          </div>
+                          <div className="flex items-center space-x-2 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                            <button onClick={() => updateQty(item.cartId, -1)} className="text-slate-500 hover:text-slate-800">-</button>
+                            <span className="text-xs font-semibold w-4 text-center">{item.qty}</span>
+                            <button onClick={() => updateQty(item.cartId, 1)} className="text-slate-500 hover:text-slate-800">+</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <!-- Total & Checkout Button -->
+                  <div className="pt-4 border-t border-slate-100 space-y-2">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>小計 Subtotal</span>
+                      <span>${subtotal}</span>
+                    </div>
+                    {orderType === 'dine-in' && (
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>服務費 (10%)</span>
+                        <span>${serviceCharge}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-base text-slate-800 pt-1">
+                      <span>總額 Total</span>
+                      <span className="text-sky-700">${totalAmount}</span>
+                    </div>
+                    <button
+                      disabled={cart.length === 0}
+                      onClick={() => setIsCheckoutOpen(true)}
+                      className="w-full bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white font-semibold py-3 rounded-xl shadow-md transition text-sm mt-3"
+                    >
+                      前往付款 (${totalAmount})
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Kitchen Display System (KDS) View */
+            <div className="max-w-7xl mx-auto px-4 py-8 flex-1 w-full">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800">廚房 / 接單實時顯示系統 (KDS)</h2>
+                  <p className="text-xs text-slate-500">即時監察與更新顧客訂單狀態</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {['preparing', 'ready', 'completed'].map(statusKey => {
+                  const statusTitles = { preparing: '製作中 (Preparing)', ready: '可取餐 (Ready)', completed: '已完成 (Completed)' };
+                  const statusColors = { preparing: 'bg-amber-500', ready: 'bg-sky-600', completed: 'bg-slate-400' };
+                  const currentOrders = orders.filter(o => o.status === statusKey);
+
+                  return (
+                    <div key={statusKey} className="bg-slate-100/70 p-4 rounded-2xl flex flex-col min-h-[500px]">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <span className={`w-3 h-3 rounded-full ${statusColors[statusKey]}`}></span>
+                        <h3 className="font-bold text-slate-700 text-sm">{statusTitles[statusKey]} ({currentOrders.length})</h3>
+                      </div>
+
+                      <div className="space-y-4 overflow-y-auto flex-1">
+                        {currentOrders.map(order => (
+                          <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                            <div className="flex justify-between items-start pb-2 border-b border-slate-100">
+                              <div>
+                                <span className="font-bold text-slate-800 text-base">{order.id}</span>
+                                <div className="text-xs text-slate-500">{order.time}</div>
+                              </div>
+                              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${order.type === 'dine-in' ? 'bg-sky-100 text-sky-800' : 'bg-orange-100 text-orange-800'}`}>
+                                {order.type === 'dine-in' ? `堂食 (${order.tableNo})` : '外賣'}
+                              </span>
+                            </div>
+
+                            <div className="py-3 space-y-2">
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className="text-xs">
+                                  <div className="flex justify-between font-semibold text-slate-700">
+                                    <span>{item.name}</span>
+                                    <span>x{item.qty}</span>
+                                  </div>
+                                  {item.options && <div className="text-sky-600">{item.options}</div>}
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
+                              <span className="font-bold text-sm">${order.total}</span>
+                              {statusKey === 'preparing' && (
+                                <button
+                                  onClick={() => updateOrderStatus(order.id, 'ready')}
+                                  className="bg-sky-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-sky-700 transition"
+                                >
+                                  標示為可取餐
+                                </button>
+                              )}
+                              {statusKey === 'ready' && (
+                                <button
+                                  onClick={() => updateOrderStatus(order.id, 'completed')}
+                                  className="bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-slate-800 transition"
+                                >
+                                  完成訂單
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <!-- Customization Modal -->
+          {customizingItem && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">{customizingItem.name}</h3>
+                    <p className="text-xs text-slate-500">{customizingItem.desc}</p>
+                  </div>
+                  <button onClick={() => setCustomizingItem(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <!-- Temperature Selection -->
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-600">溫度 Temperature</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['Iced', 'Hot'].map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setTempOptions({ ...tempOptions, temp: t })}
+                        className={`py-2 text-xs font-medium rounded-xl border ${tempOptions.temp === t ? 'border-sky-600 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-600'}`}
+                      >
+                        {t === 'Iced' ? '凍 (Iced)' : '熱 (Hot)'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <!-- Sweetness Selection -->
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-600">甜度 Sweetness</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Normal', 'Less Sweet', 'No Sugar'].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setTempOptions({ ...tempOptions, sweetness: s })}
+                        className={`py-2 text-xs font-medium rounded-xl border ${tempOptions.sweetness === s ? 'border-sky-600 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-600'}`}
+                      >
+                        {s === 'Normal' ? '正常甜' : s === 'Less Sweet' ? '少甜' : '走甜'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <!-- Milk Selection -->
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-600">奶類 Milk Choice</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['Whole Milk', 'Oat Milk (+ $4)'].map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setTempOptions({ ...tempOptions, milk: m })}
+                        className={`py-2 text-xs font-medium rounded-xl border ${tempOptions.milk === m ? 'border-sky-600 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-600'}`}
+                      >
+                        {m === 'Whole Milk' ? '全脂奶' : '燕麥奶 (+ $4)'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleConfirmCustomization}
+                  className="w-full bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-xl font-semibold text-sm shadow-md transition mt-2"
+                >
+                  確認加入購物車
+                </button>
+              </div>
+            </div>
+          )}
+
+          <!-- Simulated Payment Gateway Modal -->
+          {isCheckoutOpen && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-slate-800">選擇付款方式</h3>
+                  <button onClick={() => setIsCheckoutOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <div className="bg-sky-50 p-4 rounded-2xl flex justify-between items-center text-sky-900">
+                  <span className="text-xs">應付總額 Total Amount</span>
+                  <span className="text-2xl font-bold">${totalAmount}</span>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { id: 'payme', name: 'PayMe' },
+                    { id: 'fps', name: 'FPS 轉數快' },
+                    { id: 'octopus', name: '八達通 Octopus' },
+                    { id: 'card', name: '信用卡 Credit Card' }
+                  ].map(method => (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedPayment(method.id)}
+                      className={`w-full py-3 px-4 rounded-xl border text-left font-medium text-sm flex justify-between items-center transition ${selectedPayment === method.id ? 'border-sky-600 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600'}`}
+                    >
+                      <span>{method.name}</span>
+                      {selectedPayment === method.id && <span className="text-sky-600 font-bold">✓</span>}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handlePlaceOrder}
+                  className="w-full bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-xl font-semibold text-sm shadow-md transition"
+                >
+                  確認付款及送出訂單
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Render App
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<App />);
+  </script>
+</body>
+</html>
